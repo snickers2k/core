@@ -69,10 +69,19 @@ class SeventeenTrackCoordinator(DataUpdateCoordinator[SeventeenTrackData]):
         except SeventeenTrackError as err:
             raise UpdateFailed(err) from err
 
+        # Filter out delivered packages if show_delivered is False
+        if not self.show_delivered:
+            live_packages = {
+                package for package in live_packages if package.status != "Delivered"
+            }
+
         summary_dict = {}
         live_packages_dict = {}
 
         for status, quantity in summary.items():
+            # Skip delivered status in summary if show_delivered is False
+            if not self.show_delivered and status == "Delivered":
+                continue
             summary_dict[slugify(status)] = {
                 "quantity": quantity,
                 "packages": [],
