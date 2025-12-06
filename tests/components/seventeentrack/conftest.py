@@ -23,7 +23,7 @@ DEFAULT_SUMMARY = {
     "Ready to be Picked Up": 0,
     "Undelivered": 0,
     "Delivered": 0,
-    "Returned": 0,
+    "Alert": 0,
 }
 
 DEFAULT_SUMMARY_LENGTH = len(DEFAULT_SUMMARY)
@@ -37,7 +37,7 @@ NEW_SUMMARY_DATA = {
     "Ready to be Picked Up": 1,
     "Undelivered": 1,
     "Delivered": 1,
-    "Returned": 1,
+    "Alert": 1,
 }
 
 ARCHIVE_PACKAGE_NUMBER = "123"
