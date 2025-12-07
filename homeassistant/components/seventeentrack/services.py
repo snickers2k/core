@@ -25,10 +25,8 @@ from .const import (
     ATTR_DESTINATION_COUNTRY,
     ATTR_INFO_TEXT,
     ATTR_ORIGIN_COUNTRY,
-    ATTR_PACKAGE_DESTINATION_COUNTRY,
     ATTR_PACKAGE_FRIENDLY_NAME,
     ATTR_PACKAGE_PARAM,
-    ATTR_PACKAGE_PHONE,
     ATTR_PACKAGE_STATE,
     ATTR_PACKAGE_TRACKING_NUMBER,
     ATTR_PACKAGE_TYPE,
@@ -65,8 +63,6 @@ SERVICE_ADD_PACKAGE_SCHEMA: Final = vol.Schema(
         vol.Required(ATTR_PACKAGE_TRACKING_NUMBER): cv.string,
         vol.Required(ATTR_PACKAGE_FRIENDLY_NAME): cv.string,
         vol.Optional(ATTR_PACKAGE_PARAM): cv.string,
-        vol.Optional(ATTR_PACKAGE_PHONE): cv.string,
-        vol.Optional(ATTR_PACKAGE_DESTINATION_COUNTRY): cv.string,
     }
 )
 
@@ -85,30 +81,23 @@ async def _add_package_with_params(
     tracking_number: str,
     friendly_name: str | None = None,
     param: str | None = None,
-    phone: str | None = None,
-    destination_country: str | None = None,
 ) -> None:
     """Add a package with additional parameters to 17Track.
 
     This function extends the pyseventeentrack library to support additional
     parameters required by certain carriers (e.g., GLS, PostNL) such as
-    postal code, phone number, and destination country.
-    
+    postal code.
+
     The param field can contain:
-    - Postal code only: "3078CM"
-    - Country-Postal: "NL-1234AB" or "FR-75001"
-    - Phone format varies by carrier
+    - Postal code only: "3078CM" (for GLS)
+    - Country-Postal: "NL-1234AB" or "FR-75001" (for PostNL)
     """
     # Build the request parameters
     api_params: dict[str, Any] = {"TrackNos": [tracking_number]}
 
-    # Add optional parameters at the same level as TrackNos
+    # Add optional parameter
     if param:
         api_params["Param"] = param
-    if phone:
-        api_params["Phone"] = phone
-    if destination_country:
-        api_params["DestinationCountry"] = destination_country
 
     # Call the API directly using the client's request method
     # Note: We use the private _request method because the pyseventeentrack library
@@ -174,8 +163,6 @@ async def _add_package(call: ServiceCall) -> None:
     tracking_number = call.data[ATTR_PACKAGE_TRACKING_NUMBER]
     friendly_name = call.data[ATTR_PACKAGE_FRIENDLY_NAME]
     param = call.data.get(ATTR_PACKAGE_PARAM)
-    phone = call.data.get(ATTR_PACKAGE_PHONE)
-    destination_country = call.data.get(ATTR_PACKAGE_DESTINATION_COUNTRY)
 
     await _validate_service(call.hass, config_entry_id)
 
@@ -183,16 +170,14 @@ async def _add_package(call: ServiceCall) -> None:
         config_entry_id
     ]
 
-    # Check if additional parameters are provided
-    if param or phone or destination_country:
-        # Use custom API call with additional parameters
+    # Check if additional parameter is provided
+    if param:
+        # Use custom API call with additional parameter
         await _add_package_with_params(
             seventeen_coordinator.client,
             tracking_number,
             friendly_name,
             param,
-            phone,
-            destination_country,
         )
     else:
         # Use standard library method

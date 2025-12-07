@@ -45,8 +45,6 @@ CONFIG_ENTRY_ID_KEY = "config_entry_id"
 PACKAGE_TRACKING_NUMBER_KEY = "package_tracking_number"
 PACKAGE_STATE_KEY = "package_state"
 PACKAGE_PARAM_KEY = "package_param"
-PACKAGE_PHONE_KEY = "package_phone"
-PACKAGE_DESTINATION_COUNTRY_KEY = "package_destination_country"
 
 VALID_CONFIG = {
     CONF_USERNAME: "test",

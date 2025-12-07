@@ -20,9 +20,7 @@ from . import init_integration
 from .conftest import (
     ARCHIVE_PACKAGE_NUMBER,
     CONFIG_ENTRY_ID_KEY,
-    PACKAGE_DESTINATION_COUNTRY_KEY,
     PACKAGE_PARAM_KEY,
-    PACKAGE_PHONE_KEY,
     PACKAGE_STATE_KEY,
     PACKAGE_TRACKING_NUMBER_KEY,
     get_package,
@@ -267,47 +265,12 @@ async def test_add_package_with_params(
     assert call_args[0][0] == "post"
     assert "AddTrackNo" in str(call_args)
 
-    # Verify set_friendly_name was called
-    mock_seventeentrack.return_value.profile.set_friendly_name.assert_called_once()
-
-
-async def test_add_package_with_all_params(
-    hass: HomeAssistant,
-    mock_seventeentrack: AsyncMock,
-    mock_config_entry: MockConfigEntry,
-) -> None:
-    """Test adding a package with all additional parameters."""
-    await init_integration(hass, mock_config_entry)
-
-    # Mock the _request method and packages method
-    mock_seventeentrack.return_value._request.return_value = {"Code": 0}
-    mock_seventeentrack.return_value.profile.packages.return_value = [
-        get_package(tracking_number="FULL123456", friendly_name=None)
-    ]
-
-    await hass.services.async_call(
-        DOMAIN,
-        SERVICE_ADD_PACKAGE,
-        {
-            CONFIG_ENTRY_ID_KEY: mock_config_entry.entry_id,
-            PACKAGE_TRACKING_NUMBER_KEY: "FULL123456",
-            "package_friendly_name": "Full Package",
-            PACKAGE_PARAM_KEY: "FR-75001",
-            PACKAGE_PHONE_KEY: "0612345678",
-            PACKAGE_DESTINATION_COUNTRY_KEY: "FR",
-        },
-        blocking=True,
-    )
-
-    # Verify the _request was called
-    mock_seventeentrack.return_value._request.assert_called_once()
-    call_args = mock_seventeentrack.return_value._request.call_args
-
-    # Check that the JSON contains the tracking data with all parameters
+    # Verify the param was passed correctly
     json_data = call_args[1]["json"]
     assert json_data["method"] == "AddTrackNo"
     api_params = json_data["param"]
-    assert api_params["TrackNos"] == ["FULL123456"]
-    assert api_params["Param"] == "FR-75001"
-    assert api_params["Phone"] == "0612345678"
-    assert api_params["DestinationCountry"] == "FR"
+    assert api_params["TrackNos"] == ["GLS123456"]
+    assert api_params["Param"] == "NL-3078CM"
+
+    # Verify set_friendly_name was called
+    mock_seventeentrack.return_value.profile.set_friendly_name.assert_called_once()
