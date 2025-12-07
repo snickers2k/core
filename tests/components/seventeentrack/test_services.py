@@ -7,6 +7,7 @@ from syrupy.assertion import SnapshotAssertion
 
 from homeassistant.components.seventeentrack import DOMAIN
 from homeassistant.components.seventeentrack.const import (
+    SERVICE_ADD_PACKAGE,
     SERVICE_ARCHIVE_PACKAGE,
     SERVICE_GET_PACKAGES,
 )
@@ -19,6 +20,9 @@ from . import init_integration
 from .conftest import (
     ARCHIVE_PACKAGE_NUMBER,
     CONFIG_ENTRY_ID_KEY,
+    PACKAGE_DESTINATION_COUNTRY_KEY,
+    PACKAGE_PARAM_KEY,
+    PACKAGE_PHONE_KEY,
     PACKAGE_STATE_KEY,
     PACKAGE_TRACKING_NUMBER_KEY,
     get_package,
@@ -205,3 +209,105 @@ async def _mock_invalid_packages(mock_seventeentrack):
         package1,
         package2,
     ]
+
+
+async def test_add_package_without_params(
+    hass: HomeAssistant,
+    mock_seventeentrack: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Test adding a package without additional parameters."""
+    await init_integration(hass, mock_config_entry)
+    
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_ADD_PACKAGE,
+        {
+            CONFIG_ENTRY_ID_KEY: mock_config_entry.entry_id,
+            PACKAGE_TRACKING_NUMBER_KEY: "TEST123456",
+            "package_friendly_name": "My Package",
+        },
+        blocking=True,
+    )
+    
+    mock_seventeentrack.return_value.profile.add_package.assert_called_once_with(
+        "TEST123456", "My Package"
+    )
+
+
+async def test_add_package_with_params(
+    hass: HomeAssistant,
+    mock_seventeentrack: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Test adding a package with additional parameters."""
+    await init_integration(hass, mock_config_entry)
+    
+    # Mock the _request method and packages method
+    mock_seventeentrack.return_value._request.return_value = {"Code": 0}
+    mock_seventeentrack.return_value.profile.packages.return_value = [
+        get_package(tracking_number="GLS123456", friendly_name=None)
+    ]
+    
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_ADD_PACKAGE,
+        {
+            CONFIG_ENTRY_ID_KEY: mock_config_entry.entry_id,
+            PACKAGE_TRACKING_NUMBER_KEY: "GLS123456",
+            "package_friendly_name": "GLS Package",
+            PACKAGE_PARAM_KEY: "NL-3078CM",
+        },
+        blocking=True,
+    )
+    
+    # Verify the _request was called with the correct parameters
+    mock_seventeentrack.return_value._request.assert_called_once()
+    call_args = mock_seventeentrack.return_value._request.call_args
+    assert call_args[0][0] == "post"
+    assert "AddTrackNo" in str(call_args)
+    
+    # Verify set_friendly_name was called
+    mock_seventeentrack.return_value.profile.set_friendly_name.assert_called_once()
+
+
+async def test_add_package_with_all_params(
+    hass: HomeAssistant,
+    mock_seventeentrack: AsyncMock,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Test adding a package with all additional parameters."""
+    await init_integration(hass, mock_config_entry)
+    
+    # Mock the _request method and packages method
+    mock_seventeentrack.return_value._request.return_value = {"Code": 0}
+    mock_seventeentrack.return_value.profile.packages.return_value = [
+        get_package(tracking_number="FULL123456", friendly_name=None)
+    ]
+    
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_ADD_PACKAGE,
+        {
+            CONFIG_ENTRY_ID_KEY: mock_config_entry.entry_id,
+            PACKAGE_TRACKING_NUMBER_KEY: "FULL123456",
+            "package_friendly_name": "Full Package",
+            PACKAGE_PARAM_KEY: "FR-75001",
+            PACKAGE_PHONE_KEY: "0612345678",
+            PACKAGE_DESTINATION_COUNTRY_KEY: "FR",
+        },
+        blocking=True,
+    )
+    
+    # Verify the _request was called
+    mock_seventeentrack.return_value._request.assert_called_once()
+    call_args = mock_seventeentrack.return_value._request.call_args
+    
+    # Check that the JSON contains the tracking data with all parameters
+    json_data = call_args[1]["json"]
+    assert json_data["method"] == "AddTrackNo"
+    track_data = json_data["param"]["TrackNos"][0]
+    assert track_data["TrackNo"] == "FULL123456"
+    assert track_data["Param"] == "FR-75001"
+    assert track_data["Phone"] == "0612345678"
+    assert track_data["DestinationCountry"] == "FR"
