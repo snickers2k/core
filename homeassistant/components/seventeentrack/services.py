@@ -101,7 +101,7 @@ async def _add_package_with_params(
     """
     # Build the request parameters
     api_params: dict[str, Any] = {"TrackNos": [tracking_number]}
-    
+
     # Add optional parameters at the same level as TrackNos
     if param:
         api_params["Param"] = param
@@ -111,6 +111,9 @@ async def _add_package_with_params(
         api_params["DestinationCountry"] = destination_country
 
     # Call the API directly using the client's request method
+    # Note: We use the private _request method because the pyseventeentrack library
+    # doesn't currently support additional parameters. This is a temporary workaround
+    # until the library is updated to support these parameters natively.
     add_resp: dict = await client._request(  # noqa: SLF001
         "post",
         API_URL_BUYER,

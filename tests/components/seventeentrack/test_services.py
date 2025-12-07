@@ -218,7 +218,7 @@ async def test_add_package_without_params(
 ) -> None:
     """Test adding a package without additional parameters."""
     await init_integration(hass, mock_config_entry)
-    
+
     await hass.services.async_call(
         DOMAIN,
         SERVICE_ADD_PACKAGE,
@@ -229,7 +229,7 @@ async def test_add_package_without_params(
         },
         blocking=True,
     )
-    
+
     mock_seventeentrack.return_value.profile.add_package.assert_called_once_with(
         "TEST123456", "My Package"
     )
@@ -242,13 +242,13 @@ async def test_add_package_with_params(
 ) -> None:
     """Test adding a package with additional parameters."""
     await init_integration(hass, mock_config_entry)
-    
+
     # Mock the _request method and packages method
     mock_seventeentrack.return_value._request.return_value = {"Code": 0}
     mock_seventeentrack.return_value.profile.packages.return_value = [
         get_package(tracking_number="GLS123456", friendly_name=None)
     ]
-    
+
     await hass.services.async_call(
         DOMAIN,
         SERVICE_ADD_PACKAGE,
@@ -260,13 +260,13 @@ async def test_add_package_with_params(
         },
         blocking=True,
     )
-    
+
     # Verify the _request was called with the correct parameters
     mock_seventeentrack.return_value._request.assert_called_once()
     call_args = mock_seventeentrack.return_value._request.call_args
     assert call_args[0][0] == "post"
     assert "AddTrackNo" in str(call_args)
-    
+
     # Verify set_friendly_name was called
     mock_seventeentrack.return_value.profile.set_friendly_name.assert_called_once()
 
@@ -278,13 +278,13 @@ async def test_add_package_with_all_params(
 ) -> None:
     """Test adding a package with all additional parameters."""
     await init_integration(hass, mock_config_entry)
-    
+
     # Mock the _request method and packages method
     mock_seventeentrack.return_value._request.return_value = {"Code": 0}
     mock_seventeentrack.return_value.profile.packages.return_value = [
         get_package(tracking_number="FULL123456", friendly_name=None)
     ]
-    
+
     await hass.services.async_call(
         DOMAIN,
         SERVICE_ADD_PACKAGE,
@@ -298,11 +298,11 @@ async def test_add_package_with_all_params(
         },
         blocking=True,
     )
-    
+
     # Verify the _request was called
     mock_seventeentrack.return_value._request.assert_called_once()
     call_args = mock_seventeentrack.return_value._request.call_args
-    
+
     # Check that the JSON contains the tracking data with all parameters
     json_data = call_args[1]["json"]
     assert json_data["method"] == "AddTrackNo"
