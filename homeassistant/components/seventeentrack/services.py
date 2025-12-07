@@ -93,16 +93,22 @@ async def _add_package_with_params(
     This function extends the pyseventeentrack library to support additional
     parameters required by certain carriers (e.g., GLS, PostNL) such as
     postal code, phone number, and destination country.
+    
+    The param field can contain:
+    - Postal code only: "3078CM"
+    - Country-Postal: "NL-1234AB" or "FR-75001"
+    - Phone format varies by carrier
     """
-    # Build the tracking number data with additional parameters
-    track_data: dict[str, Any] = {"TrackNo": tracking_number}
-
+    # Build the request parameters
+    api_params: dict[str, Any] = {"TrackNos": [tracking_number]}
+    
+    # Add optional parameters at the same level as TrackNos
     if param:
-        track_data["Param"] = param
+        api_params["Param"] = param
     if phone:
-        track_data["Phone"] = phone
+        api_params["Phone"] = phone
     if destination_country:
-        track_data["DestinationCountry"] = destination_country
+        api_params["DestinationCountry"] = destination_country
 
     # Call the API directly using the client's request method
     add_resp: dict = await client._request(  # noqa: SLF001
@@ -111,7 +117,7 @@ async def _add_package_with_params(
         json={
             "version": "1.0",
             "method": "AddTrackNo",
-            "param": {"TrackNos": [track_data]},
+            "param": api_params,
         },
     )
 

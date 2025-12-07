@@ -306,8 +306,8 @@ async def test_add_package_with_all_params(
     # Check that the JSON contains the tracking data with all parameters
     json_data = call_args[1]["json"]
     assert json_data["method"] == "AddTrackNo"
-    track_data = json_data["param"]["TrackNos"][0]
-    assert track_data["TrackNo"] == "FULL123456"
-    assert track_data["Param"] == "FR-75001"
-    assert track_data["Phone"] == "0612345678"
-    assert track_data["DestinationCountry"] == "FR"
+    api_params = json_data["param"]
+    assert api_params["TrackNos"] == ["FULL123456"]
+    assert api_params["Param"] == "FR-75001"
+    assert api_params["Phone"] == "0612345678"
+    assert api_params["DestinationCountry"] == "FR"
