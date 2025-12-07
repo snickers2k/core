@@ -28,6 +28,15 @@ add_package:
       required: true
       selector:
         text:
+    package_param:
+      selector:
+        text:
+    package_phone:
+      selector:
+        text:
+    package_destination_country:
+      selector:
+        text:
     config_entry_id:
       required: true
       selector:

@@ -2,6 +2,8 @@
 
 from typing import Any, Final
 
+from pyseventeentrack import Client as SeventeenTrackClient
+from pyseventeentrack.errors import InvalidTrackingNumberError, RequestError
 from pyseventeentrack.package import PACKAGE_STATUS_MAP, Package
 import voluptuous as vol
 
@@ -23,7 +25,10 @@ from .const import (
     ATTR_DESTINATION_COUNTRY,
     ATTR_INFO_TEXT,
     ATTR_ORIGIN_COUNTRY,
+    ATTR_PACKAGE_DESTINATION_COUNTRY,
     ATTR_PACKAGE_FRIENDLY_NAME,
+    ATTR_PACKAGE_PARAM,
+    ATTR_PACKAGE_PHONE,
     ATTR_PACKAGE_STATE,
     ATTR_PACKAGE_TRACKING_NUMBER,
     ATTR_PACKAGE_TYPE,
@@ -59,6 +64,9 @@ SERVICE_ADD_PACKAGE_SCHEMA: Final = vol.Schema(
         vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
         vol.Required(ATTR_PACKAGE_TRACKING_NUMBER): cv.string,
         vol.Required(ATTR_PACKAGE_FRIENDLY_NAME): cv.string,
+        vol.Optional(ATTR_PACKAGE_PARAM): cv.string,
+        vol.Optional(ATTR_PACKAGE_PHONE): cv.string,
+        vol.Optional(ATTR_PACKAGE_DESTINATION_COUNTRY): cv.string,
     }
 )
 
@@ -68,6 +76,62 @@ SERVICE_ARCHIVE_PACKAGE_SCHEMA: Final = vol.Schema(
         vol.Required(ATTR_PACKAGE_TRACKING_NUMBER): cv.string,
     }
 )
+
+API_URL_BUYER: Final = "https://buyer.17track.net/orderapi/call"
+
+
+async def _add_package_with_params(
+    client: SeventeenTrackClient,
+    tracking_number: str,
+    friendly_name: str | None = None,
+    param: str | None = None,
+    phone: str | None = None,
+    destination_country: str | None = None,
+) -> None:
+    """Add a package with additional parameters to 17Track.
+
+    This function extends the pyseventeentrack library to support additional
+    parameters required by certain carriers (e.g., GLS, PostNL) such as
+    postal code, phone number, and destination country.
+    """
+    # Build the tracking number data with additional parameters
+    track_data: dict[str, Any] = {"TrackNo": tracking_number}
+
+    if param:
+        track_data["Param"] = param
+    if phone:
+        track_data["Phone"] = phone
+    if destination_country:
+        track_data["DestinationCountry"] = destination_country
+
+    # Call the API directly using the client's request method
+    add_resp: dict = await client._request(  # noqa: SLF001
+        "post",
+        API_URL_BUYER,
+        json={
+            "version": "1.0",
+            "method": "AddTrackNo",
+            "param": {"TrackNos": [track_data]},
+        },
+    )
+
+    code = add_resp.get("Code")
+    if code != 0:
+        raise RequestError(f"Non-zero status code in response: {code}")
+
+    if not friendly_name:
+        return
+
+    # Set the friendly name after adding the package
+    packages = await client.profile.packages()
+    try:
+        new_package = next(p for p in packages if p.tracking_number == tracking_number)
+    except StopIteration as err:
+        raise InvalidTrackingNumberError(
+            f"Recently added package not found by tracking number: {tracking_number}"
+        ) from err
+
+    await client.profile.set_friendly_name(new_package.id, friendly_name)
 
 
 async def _get_packages(call: ServiceCall) -> ServiceResponse:
@@ -100,6 +164,9 @@ async def _add_package(call: ServiceCall) -> None:
     config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
     tracking_number = call.data[ATTR_PACKAGE_TRACKING_NUMBER]
     friendly_name = call.data[ATTR_PACKAGE_FRIENDLY_NAME]
+    param = call.data.get(ATTR_PACKAGE_PARAM)
+    phone = call.data.get(ATTR_PACKAGE_PHONE)
+    destination_country = call.data.get(ATTR_PACKAGE_DESTINATION_COUNTRY)
 
     await _validate_service(call.hass, config_entry_id)
 
@@ -107,9 +174,22 @@ async def _add_package(call: ServiceCall) -> None:
         config_entry_id
     ]
 
-    await seventeen_coordinator.client.profile.add_package(
-        tracking_number, friendly_name
-    )
+    # Check if additional parameters are provided
+    if param or phone or destination_country:
+        # Use custom API call with additional parameters
+        await _add_package_with_params(
+            seventeen_coordinator.client,
+            tracking_number,
+            friendly_name,
+            param,
+            phone,
+            destination_country,
+        )
+    else:
+        # Use standard library method
+        await seventeen_coordinator.client.profile.add_package(
+            tracking_number, friendly_name
+        )
 
 
 async def _archive_package(call: ServiceCall) -> None:
