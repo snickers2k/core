@@ -90,7 +90,7 @@ async def _add_package_with_params(
 
     The param field can contain:
     - Postal code only: "3078CM" (for GLS)
-    - Country-Postal: "NL-1234AB" or "FR-75001" (for PostNL)
+    - Country-Postal: "NL-1234AB" (for PostNL, Dutch postal code with NL prefix)
     """
     # Build the request parameters
     api_params: dict[str, Any] = {"TrackNos": [tracking_number]}
