@@ -93,6 +93,10 @@
         "package_tracking_number": {
           "description": "The package with the tracking number will be added.",
           "name": "Package tracking number to add"
+        },
+        "package_param": {
+          "description": "Additional parameter required by some carriers. For GLS: postal code like '3078CM'. For PostNL: country-postal like 'NL-1234AB'.",
+          "name": "Additional parameter"
         }
       },
       "name": "Add a package"

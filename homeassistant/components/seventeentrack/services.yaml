@@ -28,6 +28,9 @@ add_package:
       required: true
       selector:
         text:
+    package_param:
+      selector:
+        text:
     config_entry_id:
       required: true
       selector:
